@@ -1,0 +1,251 @@
+<!doctype html>
+<html>
+<head>
+	<title>DuckyBird</title>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+		}
+		canvas {
+			margin: 40px auto;
+			background-color: #73B5FC;
+			display: block;
+		}
+		#instructions {
+			text-align: center;
+			font-size: 18px;
+			color: #777;
+			font-family: verdana;
+			padding: 10px 0 0 0;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="actionArea" width="640" height="480"></canvas>
+	<audio id="bounce" src="sounds/bounce.wav"></audio>
+	<audio id="over" src="sounds/over.wav"></audio>
+	<audio id="bloop" src="sounds/bloop.wav"></audio>
+
+	<p id="instructions">spacebar!</p>
+
+	<script>
+
+		var red = Math.floor(Math.random() * 80);
+		var green = Math.floor(Math.random() * 80);
+		var blue = Math.floor(Math.random() * 80);
+		var rgba = 'rgba(' + red + ',' + blue + ',' + green + ', 1)';
+
+		var flap = 0;
+		var score = 0;
+		
+		var canvas = document.getElementById("actionArea");
+		var ctx = canvas.getContext("2d");
+
+		var x = canvas.width / 4;
+		var y = canvas.height / 4;
+
+		var dropFactor = 1; // 2
+		var	boostFactor = 8; // 16
+
+		var drop = 0;
+
+		var spacePress = false;
+
+		function drawBird() {
+			ctx.beginPath();
+			ctx.rect(x, y, 20, 20);
+			ctx.fillStyle = "#E8FF00";
+			ctx.fill();
+			ctx.closePath();
+
+			ctx.beginPath();
+			ctx.rect(x + 15, y + 5, 10, 5);
+			ctx.fillStyle = "#FA6F0F";
+			ctx.fill();
+			ctx.closePath();
+
+			ctx.beginPath();
+			ctx.rect(x + 15, y + 2, 2, 2);
+			ctx.fillStyle = "#000";
+			ctx.fill();
+			ctx.closePath();
+
+			if(flap % 2 == 0) {
+				ctx.beginPath();
+				ctx.rect(x, y + 10, -5, 4);
+				ctx.fillStyle = "#FDFF5E";
+				ctx.fill();
+				ctx.closePath();
+			}
+
+			else {
+				ctx.beginPath();
+				ctx.rect(x - 5, y + 2, -8, 4);
+				ctx.fillStyle = "#FDFF5E";
+				ctx.fill();
+				ctx.closePath();
+			}
+
+			flap++;
+		}
+
+		function dropBird() {
+			y += dropFactor;
+			if(dropFactor >= 5) // 10
+				dropFactor = 5; // 10
+			else
+				dropFactor *= 1.2; // 1.2
+		}
+
+		function boostBird() {
+			if(drop == 1) {
+				if(boostFactor > 1) {
+					dropFactor = 0;
+					y -= boostFactor;
+					boostFactor /= 1.1;
+				}
+				else {
+					dropFactor = 0.1;
+					boostFactor = 8; // 16
+					drop = 0;
+				}
+			}
+		}
+
+		function drawBounds() {
+			ctx.beginPath();
+			ctx.rect(0, 0, canvas.width, 36);
+			ctx.rect(0, canvas.height - 36, canvas.width, canvas.height);
+			ctx.fillStyle = rgba;
+			ctx.fill();
+			ctx.closePath();
+		}
+
+		var obsWidth = 30;
+		var obsy = canvas.height - 36;
+		var obsz = 36;
+
+		var obs = [];
+
+		for(var i = 1; i < 1000; i++) {
+			obs[0] = {x: canvas.width, h: Math.floor(Math.random() * 300)};
+			obs[i] = {x: obs[i - 1].x, h: Math.floor(Math.random() * 300)};
+		}
+
+		var objCount = 0;
+		var objzCount = 1;
+
+		var descent = 1;
+
+		function drawObs() {
+			ctx.beginPath();
+			ctx.rect(obs[objCount].x, obs[objCount].x, obsWidth, -obs[objCount].h);
+			ctx.fillStyle = rgba;
+			ctx.fill();
+			ctx.closePath();
+			obs[objCount].x -= descent;
+
+			if(obs[objCount].x <= -obsWidth)
+				objCount++;
+
+			descent += 0.001;
+		}
+
+		function drawLimbo() {
+			ctx.beginPath();
+			ctx.rect(obs[objzCount].x + canvas.width / 2, -obs[objzCount].x, obsWidth, obs[objzCount].h);
+			ctx.fillStyle = rgba;
+			ctx.fill();
+			ctx.closePath();
+			obs[objzCount].x -= descent;
+			if(obs[objzCount].x + canvas.width <= 0)
+				objzCount++;
+		}
+
+		function detectObs() {
+			if(x >= obs[objCount].x - 15 && x <= obs[objCount].x + 15 && y >= obs[objCount].x - obs[objCount].h && y <= obs[objCount].x)
+				gameOver();
+			if(x >= obs[objzCount].x - 15 && x <= obs[objzCount].x + 15 && y >= obs[objzCount].x - obs[objzCount].h && y <= obs[objzCount].x)
+				gameOver();
+			if(x >= obs[objCount].x - 15 && x <= obs[objCount].x + 15 && y < obsy - obs[objCount].h) {
+				score = objCount + 1;
+				bloop.play();
+			}
+		}
+
+		function trackScore() {
+			ctx.font = "16px Arial";
+	    	ctx.fillStyle = "#FF0";
+			ctx.fillText("SCORE: " + score, 8, 58);
+		}
+
+		function detectEdges() {
+			if(Math.floor(y) <= 36 || Math.floor(y) >= canvas.height - 36)
+				gameOver();
+		}
+
+		function gameOver() {
+			over.play();
+			alert("GAME OVER. Score: " + score + "\nPress Enter to retry");
+			document.location.reload();
+		}
+
+		function keyDownHandler(e) {
+			if(e.keyCode == 32)
+				spacePress = true;
+		}
+
+		function keyUpHandler(e) {
+			if(e.keyCode == 32)
+				spacePress = false;
+		}
+
+		function detectKey() {
+			if(spacePress == true) {
+				drop = 1;
+				bounce.play();
+			}
+			spacePress = false;
+		}
+
+		function HUD() {
+			ctx.font = "16px Consolas";
+	    	ctx.fillStyle = "#FF0";
+    	//	ctx.fillText(Math.floor(y), canvas.width - 40, canvas.height - 8);
+    		ctx.fillText("(" + x + ", " + y + ")", x, y);
+    	//	ctx.fillText(obs[objCount].x + " " + obsy, obs[objCount].x, obsy);
+    	//	ctx.fillText("(" + Math.floor(obs[objCount].x - descent) + ", " + obs[objCount].h + ")", obs[objCount].x - descent, obsy - obs[objCount].h);
+    		ctx.fillText(descent, 10, 20);
+    		ctx.fillText(obs[objCount].x, obs[objCount].x, obs[objCount].x);
+    		ctx.fillText(obs[objCount].x - obs[objCount].h, obs[objCount].x, obs[objCount].x - obs[objCount].h);
+    	//	obs[objzCount].x + canvas.width / 2, -obs[objzCount].x, obsWidth, obs[objzCount].h
+    		ctx.fillText(obs[objzCount].x + canvas.width / 2, obs[objzCount].x + canvas.width / 2, -obs[objzCount].x);
+       		ctx.fillText(obs[objzCount].x + canvas.width / 2, obs[objzCount].x + canvas.width / 2, -obs[objzCount].x + obs[objzCount].h); 		
+    	//	ctx.fillText("(" + (obs[objCount].x - 15) + ", " + (obsy - obs[objCount].h) + ")", obs[objCount].x - 15, obsy - obs[objCount].h);
+    	}
+
+		function go() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			detectKey();
+			drawBird();
+			dropBird();
+			boostBird();
+			detectEdges();
+			drawBounds();
+			drawObs();
+			detectObs();
+			trackScore();
+			drawLimbo();
+			HUD();
+		}
+
+		document.addEventListener("keydown", keyUpHandler, false);
+		document.addEventListener("keyup", keyDownHandler, false);
+
+		setInterval(go, 15);
+		
+	</script>
+</body>
+</html>

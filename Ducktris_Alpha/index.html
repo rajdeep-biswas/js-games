@@ -1,0 +1,127 @@
+<!doctype html>
+
+<html>
+	<head>
+		<title>Ducktris</title>
+		<style>
+			#actionArea {
+				background-color: #CCC;
+				margin: 0 auto;
+				display: block;
+			}
+		</style>
+	</head>
+	
+	<body>
+		<canvas id="actionArea" width="400" height="600"></canvas>
+		<script>
+		
+			var canvas = document.getElementById("actionArea");
+			var ctx = canvas.getContext("2d");
+			
+			var aKey = false;
+			var dKey = false;
+		
+			var cube = 40;
+			var cubex = canvas.width / 2 - cube / 2;
+			var cubey = 0;
+			
+			var hitBox = canvas.height;
+
+			var stackList = 0;
+			var stack = [];
+
+			function drawCube() {
+				ctx.beginPath();
+				ctx.rect(cubex, cubey, cube, cube);
+				ctx.fillStyle = "#999";
+				ctx.fill();
+				ctx.closePath();
+			}
+			
+			function dropCube() {
+				cubey += cube;
+			}
+			
+			function moveCube() {
+				if(aKey == true)
+					cubex -= cube;
+				else if(dKey == true)
+					cubex += cube;
+			}
+			
+			function detectBottom() {
+				if(cubey + cube != hitBox) {
+					dropCube();
+				}
+				else {
+					stack[stackList++] = {x: cubex, y: cubey, hash: cubex % canvas.width};
+					cubey = 0;
+				}
+			}
+			
+			function drawStack() {
+				for(var i = 0; i < stackList; i++) {
+					ctx.beginPath();
+					ctx.rect(stack[i].x, stack[i].y, cube, cube);
+					ctx.fillStyle = "#999";
+					ctx.fill();
+					ctx.closePath();
+					console.log(stackList);
+				}
+			}
+
+			function detectStack() {
+				for(var i = 0; i < stackList; i++)
+					if(stack[i].hash == cubex % canvas.width)
+						hitBox = stack[i].y;
+			}
+			
+			function getBottom() {
+				for(var i = 0; i < stackList; i++)
+					if(stack[i].hash != cubex % canvas.width)
+						hitBox = canvas.height;
+			}
+				
+			function updateScreen() {
+				ctx.clearRect(0, 0, canvas.width, canvas.height);
+				drawCube();
+				moveCube();
+				getBottom();
+				detectStack();
+				detectBottom();
+				drawStack();
+				HUD();
+			}
+			
+			function HUD() {
+				ctx.font = "16px Consolas";
+				ctx.fillStyle = "#000";
+				ctx.fillText("hitbox: " + hitBox, 8, 20);
+			}
+			
+			function keyDownHandler(e) {
+				if(e.keyCode == 65) {
+					aKey = true;
+				}
+				else if(e.keyCode == 68) {
+					dKey = true;
+				}
+			}
+
+			function keyUpHandler(e) {
+				if(e.keyCode == 65) {
+					aKey = false;
+				}
+				else if(e.keyCode == 68) {
+					dKey = false;
+				}
+			}
+			
+			document.addEventListener("keydown", keyDownHandler, false);
+			document.addEventListener("keyup", keyUpHandler, false);
+			
+			setInterval(updateScreen, 200);
+		</script>
+	</body>
+</html>

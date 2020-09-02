@@ -1,0 +1,104 @@
+<!DOCTYPE HTML>
+
+<html>
+
+<head>
+	<title>Duckanoid</title>
+	<style>
+		* {
+			background-color: #ADFAA7;
+			padding: 0;
+			margin: 0;
+		}
+
+		canvas {
+			background: #ADFAA7;
+			display: block;
+			margin: 40px auto;
+		}
+
+		#instructions {
+			text-align: center;
+			font-size: 18px;
+			color: #777;
+			font-family: verdana;
+			padding: 20px 0 0 0;
+		}
+
+		#instructions2 {
+			text-align: center;
+			font-size: 14px;
+			color: #777;
+			font-family: verdana;
+		}
+	</style>
+</head>
+
+<body>
+	<canvas id="actionArea" width="1200" height="550"></canvas>
+	
+	<script>
+		// storing a reference to the <canvas> element
+		var canvas = document.getElementById("actionArea");
+
+		// ctx stores the "2d rendering context"; which will be the actual tool we're gonna use to draw on the canvas
+		var ctx = canvas.getContext("2d"); // * getconteXt, and not getconteNt
+
+		var x = 120;
+		var dx = 1;
+
+		var y = 260;
+		var dy = 1;
+
+		function drawBall() {
+			ctx.beginPath();
+			ctx.arc(x, y, 15, 0, Math.PI * 2);
+			var red = Math.floor(Math.random() * 255);
+			var green = Math.floor(Math.random() * 255);
+			var blue = Math.floor(Math.random() * 255);
+			ctx.fillStyle = "#11FF00";
+			ctx.fill(); // * fill() is a method. hence; fill(); and not just fill;
+			ctx.closePath();
+			x += dx;
+			y += 0;
+		}
+
+		function drawPaddle() {
+			ctx.beginPath();
+			ctx.rect(100, 240, 1000, 40);
+			ctx.fillStyle = "#3D996C";
+			ctx.fill();
+			ctx.closePath();
+		}
+
+		function translate() {
+			if(x >= 1090) {
+				dx *= -0.01;
+			}
+
+			else if(x <= 110) {
+				dx *= -0.01;
+			}
+
+			if(x >= 600) {
+				dx -= 0.09;
+			}
+
+			else if(x >= 0) {
+				dx += 0.09;
+			}
+		}
+
+		function updateScreen() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			drawPaddle();
+			drawBall();
+			translate();
+		}
+
+		setInterval(updateScreen, 2);
+
+	</script>
+</body>
+
+</html>

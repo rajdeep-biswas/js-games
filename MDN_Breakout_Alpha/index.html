@@ -1,0 +1,316 @@
+<!DOCTYPE HTML>
+
+<html>
+
+<head>
+	<title>Duckanoid</title>
+	<style>
+		* {
+			background-color: #000;
+			padding: 0;
+			margin: 0;
+		}
+
+		canvas {
+			background: #888;
+			display: block;
+			margin: 40px auto;
+		}
+
+		#instructions {
+			text-align: center;
+			font-size: 18px;
+			color: #777;
+			font-family: verdana;
+			padding: 20px 0 0 0;
+		}
+
+		#instructions2 {
+			text-align: center;
+			font-size: 14px;
+			color: #777;
+			font-family: verdana;
+		}
+	</style>
+</head>
+
+<body>
+	<audio id="hitEdge" src="sounds\wall.wav"></audio>
+	<audio id="hitPad" src="sounds\pad.wav"></audio>
+	<audio id="hitBrick" src="sounds\brick.wav"></audio>
+	<audio id="gameOver" src="sounds\gameover.wav"></audio>
+
+	<canvas id="actionArea" width="640" height="480"></canvas>
+	<p id="instructions">Controls: Right and Left Arrow Keys to Move the Paddle</p>
+	<p id="instructions2">Please refresh (ctrl + R) the page once if you don't hear any sound</p>
+
+	<script>
+		// storing a reference to the <canvas> element
+		var canvas = document.getElementById("actionArea");
+
+		// ctx stores the "2d rendering context"; which will be the actual tool we're gonna use to draw on the canvas
+		var ctx = canvas.getContext("2d"); // * getconteXt, and not getconteNt
+
+		var hitEdges = document.getElementById("hitEdge"); 
+
+		var paddleHeight = 15;
+		var paddleWidth = 85;
+		var paddleX = (canvas.width - paddleWidth) / 2;
+
+		var rightArrow = false;
+		var leftArrow = false;
+
+		var brickRows = 3; // 3
+		var brickCols = 10; // 10
+		var brickWidth = 64;
+		var brickHeight = 20;
+		var brickPadding = 0;
+		var brickOffsetTop = 0;
+		var brickOffsetLeft = 0;
+
+		var x = Math.floor(Math.random() * 640);
+		var dx = Math.random() * 1;
+
+		var fate = Math.random() * 2;
+
+		if(fate <= 1) {
+			dx *= -1;
+		}
+
+		var y = 70, dy = 1;
+		var ballSize = 6;
+		var hitCount = 0, checkWin;
+
+		var bricks = [];
+		for(var i = 0; i < brickCols; i++) {
+			bricks[i] = [];
+			for(var j = 0; j < brickRows; j++) {
+				var red = Math.floor(Math.random() * 255);
+				var green = Math.floor(Math.random() * 255);
+				var blue = Math.floor(Math.random() * 255);
+				var rgba = 'rgba(' + red + ',' + blue + ',' + green + ', 1)';
+				bricks[i][j] = {x: 0, y: 0, status: 1, color: rgba};
+			}
+		}
+
+		function detectEdge() {
+			// right wall
+			if(Math.floor(x) == canvas.width - 1) {
+				dx = -dx;
+				hitEdges.play();
+			}
+
+			// bottom wall
+			if(Math.floor(y) == canvas.height - 1) {				
+				gameOver.play();
+				alert("GAME OVER. Press Enter to retry");
+				document.location.reload();
+			}
+
+			// left wall
+			if(Math.floor(x) == 0) {
+				dx = -dx;
+				hitEdges.play();
+			}
+
+			// top wall
+			if(Math.floor(y) == 0) {
+				dy = -dy;
+				hitEdges.play();
+			}
+
+			if(y == canvas.height - paddleHeight && x > paddleX && x < paddleX + paddleWidth) {
+
+				var pMid = paddleWidth / 2 + paddleX + 1;
+	    		
+	    		var pRight1 = (((paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2) + (paddleWidth / 2 + paddleX + 1)) / 2;
+	    		var pRight2 = (paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2;
+	    		var pRight3 = (((paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2) + paddleX + paddleWidth) / 2;
+	    		var pRight4 = paddleX + paddleWidth;
+
+	    		var pLeft1 = (((paddleX + (paddleWidth / 2 + paddleX + 1)) / 2) + paddleWidth / 2 + paddleX + 1) / 2;
+	    		var pLeft2 = (paddleX + (paddleWidth / 2 + paddleX + 1)) / 2;
+	    		var pLeft3 = (paddleX + (paddleX + (paddleWidth / 2 + paddleX + 1)) / 2) / 2;
+	    		var pLeft4 = paddleX;
+
+				dy = -1;
+				if(x == pMid) {
+					dx = 0;
+				}
+				else if(x < pMid && x >= pLeft1) {
+					dx = -0.2;
+				}
+				else if(x < pLeft1 && x >= pLeft2) {
+					dx = -0.4;
+				}
+				else if(x < pLeft2 && x >= pLeft3) {
+					dx = -0.6;
+				}
+				else if(x < pLeft3 && x >= pLeft4) {
+					dx = -0.8;
+				}
+				else if(x > pMid && x <= pRight1) {
+					dx = 0.2;
+				}
+				else if(x > pRight1 && x <= pRight2) {
+					dx = 0.4;
+				}
+				else if(x > pRight2 && x <= pRight3) {
+					dx = 0.6;
+				}
+				else if(x > pRight3 && x <= pRight4) {
+					dx = 0.8;
+				}
+
+				y = canvas.height - paddleHeight; // make sure the ball doesn't (visually) hit the bottom of the screen if it has contact with paddle
+				hitPad.play();
+				hitCount++;
+				brickOffsetTop += 5;
+			}
+		}
+
+		function detectBrick() {
+			for(var i = 0; i < brickCols; i++) {
+				for(var j = 0; j < brickRows; j++) {
+					var brick = bricks[i][j];
+					if(bricks[i][j].status == 1) {
+						if(Math.floor(x) > brick.x && Math.floor(x) < brick.x + brickWidth && (y == brick.y + brickHeight || y == brick.y)) {
+							dy = -dy;
+							hitBrick.play();
+							bricks[i][j].status = 0;
+						}
+						else if(y > brick.y && y < brick.y + brickHeight && (Math.floor(x) == brick.x + brickWidth || Math.floor(x) == brick.x)) {
+							dx = -dx;
+							hitBrick.play();
+							bricks[i][j].status = 0;
+						}
+					}
+				}
+			}
+		}
+
+		function drawBall() {
+			ctx.beginPath();
+			ctx.arc(x, y, ballSize, 0, Math.PI * 2);
+			var red = Math.floor(Math.random() * 255);
+			var green = Math.floor(Math.random() * 255);
+			var blue = Math.floor(Math.random() * 255);
+			var rgba = 'rgba(' + red + ',' + blue + ',' + green + ', 1)';
+			ctx.fillStyle = rgba;
+			ctx.fill(); // * fill() is a method. hence; fill(); and not just fill;
+			ctx.closePath();
+			x += dx;
+			y += dy;
+		}
+
+		function drawPaddle() {
+			ctx.beginPath();
+			ctx.rect(paddleX, canvas.height - paddleHeight, paddleWidth, paddleHeight);
+			ctx.fillStyle = "#444";
+			ctx.fill();
+			ctx.closePath();
+		}
+
+		function drawBricks() {
+			checkWin = 0;
+			for(var i = 0; i < brickCols; i++) {
+				for(var j = 0; j < brickRows; j++) {
+					if(bricks[i][j].status == 1) {
+						
+						var brickX = (i * (brickWidth + brickPadding)) + brickOffsetLeft;
+						var brickY = (j * (brickHeight + brickPadding)) + brickOffsetTop;
+						bricks[i][j].x = brickX;
+						bricks[i][j].y = brickY;
+						ctx.beginPath();
+						ctx.rect(brickX, brickY, brickWidth, brickHeight);
+						ctx.fillStyle = bricks[i][j].color;
+						ctx.fill();
+						ctx.closePath();
+
+						checkWin = 1;
+					}
+				}
+			}
+		}
+
+		function checkWinF() {
+			if(checkWin == 0) {
+				alert("Congratulations, you beat the game at " + hitCount + " pad hits!");
+				document.location.reload();
+			}
+		}
+
+		function checkKey() {
+			if(rightArrow && paddleX < canvas.width - paddleWidth) {
+				paddleX += 2;
+			}
+			else if(leftArrow && paddleX > 0) {
+				paddleX -= 2;
+			}
+		}
+
+		function updateScreen() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			checkKey();
+			drawBricks();
+			drawBall();
+			drawPaddle();
+			detectEdge();
+			detectBrick();
+			checkWinF();
+		//	HUD();
+		}
+
+		function HUD() {
+			ctx.font = "16px Consolas";
+	    	ctx.fillStyle = "#FF0";
+    		ctx.fillText("x: " + dx + " y: " + dy, 8, canvas.height - 8);
+    		ctx.fillText("(" + x + ", " + y + ")", x, y);
+    		
+    		ctx.fillStyle = "BLUE";
+    		ctx.fillText("|", paddleX, canvas.height - 3);
+    		ctx.fillStyle = "CYAN";
+    		ctx.fillText("|", (paddleX + (paddleX + (paddleWidth / 2 + paddleX + 1)) / 2) / 2, canvas.height - 3);
+    		ctx.fillStyle = "PURPLE";
+    		ctx.fillText("|", (paddleX + (paddleWidth / 2 + paddleX + 1)) / 2, canvas.height - 3);
+    		ctx.fillStyle = "LIME";
+    		ctx.fillText("|", (((paddleX + (paddleWidth / 2 + paddleX + 1)) / 2) + paddleWidth / 2 + paddleX + 1) / 2, canvas.height - 3);
+    		ctx.fillStyle = "RED";
+    		ctx.fillText("| " + (paddleWidth / 2 + paddleX + 1), paddleWidth / 2 + paddleX + 1, canvas.height - 3);
+    		ctx.fillStyle = "OLIVE";
+    		ctx.fillText("|", (((paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2) + (paddleWidth / 2 + paddleX + 1)) / 2, canvas.height - 3);
+    		ctx.fillStyle = "ORANGE";
+    		ctx.fillText("|", (paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2, canvas.height - 3);
+    		ctx.fillStyle = "YELLOW";
+    		ctx.fillText("|", (((paddleWidth / 2 + paddleX + 1 + paddleX + paddleWidth) / 2) + paddleX + paddleWidth) / 2, canvas.height - 3);
+    		ctx.fillStyle = "GREEN";
+    		ctx.fillText("|", paddleX + paddleWidth, canvas.height - 3);
+		}
+
+		function keyDownHandler(e) {
+			if(e.keyCode == 39) {
+				rightArrow = true;
+			}
+			else if(e.keyCode == 37) {
+				leftArrow = true;
+			}
+		}
+
+		function keyUpHandler(e) {
+			if(e.keyCode == 39) {
+				rightArrow = false;
+			}
+			else if(e.keyCode == 37) {
+				leftArrow = false;
+			}
+		}
+
+		document.addEventListener("keydown", keyDownHandler, false);
+		document.addEventListener("keyup", keyUpHandler, false);
+
+		setInterval(updateScreen, 2);
+
+	</script>
+</body>
+
+</html>
